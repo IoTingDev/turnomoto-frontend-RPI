@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as ConfirmacionRouteImport } from './routes/confirmacion'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
 
@@ -22,6 +23,11 @@ const ServiciosRoute = ServiciosRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConfirmacionRoute = ConfirmacionRouteImport.update({
+  id: '/confirmacion',
+  path: '/confirmacion',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AgendaRoute = AgendaRouteImport.update({
@@ -38,12 +44,14 @@ const IndexRoute = IndexRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/confirmacion': typeof ConfirmacionRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/confirmacion': typeof ConfirmacionRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
@@ -51,20 +59,28 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
+  '/confirmacion': typeof ConfirmacionRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/agenda' | '/registro' | '/servicios'
+  fullPaths: '/' | '/agenda' | '/confirmacion' | '/registro' | '/servicios'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/agenda' | '/registro' | '/servicios'
-  id: '__root__' | '/' | '/agenda' | '/registro' | '/servicios'
+  to: '/' | '/agenda' | '/confirmacion' | '/registro' | '/servicios'
+  id:
+    | '__root__'
+    | '/'
+    | '/agenda'
+    | '/confirmacion'
+    | '/registro'
+    | '/servicios'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
+  ConfirmacionRoute: typeof ConfirmacionRoute
   RegistroRoute: typeof RegistroRoute
   ServiciosRoute: typeof ServiciosRoute
 }
@@ -83,6 +99,13 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/confirmacion': {
+      id: '/confirmacion'
+      path: '/confirmacion'
+      fullPath: '/confirmacion'
+      preLoaderRoute: typeof ConfirmacionRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/agenda': {
@@ -105,6 +128,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
+  ConfirmacionRoute: ConfirmacionRoute,
   RegistroRoute: RegistroRoute,
   ServiciosRoute: ServiciosRoute,
 }
