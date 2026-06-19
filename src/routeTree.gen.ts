@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as RegistroRouteImport } from './routes/registro'
 import { Route as MecanicoRouteImport } from './routes/mecanico'
+import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfirmacionRouteImport } from './routes/confirmacion'
 import { Route as AgendaRouteImport } from './routes/agenda'
 import { Route as IndexRouteImport } from './routes/index'
@@ -29,6 +30,11 @@ const RegistroRoute = RegistroRouteImport.update({
 const MecanicoRoute = MecanicoRouteImport.update({
   id: '/mecanico',
   path: '/mecanico',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ConfirmacionRoute = ConfirmacionRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/confirmacion': typeof ConfirmacionRoute
+  '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/confirmacion': typeof ConfirmacionRoute
+  '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/agenda': typeof AgendaRoute
   '/confirmacion': typeof ConfirmacionRoute
+  '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
@@ -78,6 +87,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/confirmacion'
+    | '/dashboard'
     | '/mecanico'
     | '/registro'
     | '/servicios'
@@ -86,6 +96,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/confirmacion'
+    | '/dashboard'
     | '/mecanico'
     | '/registro'
     | '/servicios'
@@ -94,6 +105,7 @@ export interface FileRouteTypes {
     | '/'
     | '/agenda'
     | '/confirmacion'
+    | '/dashboard'
     | '/mecanico'
     | '/registro'
     | '/servicios'
@@ -103,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AgendaRoute: typeof AgendaRoute
   ConfirmacionRoute: typeof ConfirmacionRoute
+  DashboardRoute: typeof DashboardRoute
   MecanicoRoute: typeof MecanicoRoute
   RegistroRoute: typeof RegistroRoute
   ServiciosRoute: typeof ServiciosRoute
@@ -129,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/mecanico'
       fullPath: '/mecanico'
       preLoaderRoute: typeof MecanicoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/confirmacion': {
@@ -159,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AgendaRoute: AgendaRoute,
   ConfirmacionRoute: ConfirmacionRoute,
+  DashboardRoute: DashboardRoute,
   MecanicoRoute: MecanicoRoute,
   RegistroRoute: RegistroRoute,
   ServiciosRoute: ServiciosRoute,
