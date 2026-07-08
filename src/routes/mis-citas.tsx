@@ -2,13 +2,24 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useIdleTimeout, IdleOverlay } from "@/lib/use-idle-timeout";
-import { listarCitasCliente, cancelarCita, ApiError, type CitaResponse } from "@/lib/api-client";
-import { SERVICIOS, formatFechaLarga } from "@/lib/mock-data";
+import { listarCitasCliente, cancelarCita, ApiError } from "@/lib/api-client";
+import { formatFechaLarga } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/mis-citas")({
   head: () => ({ meta: [{ title: "Mis citas — Agenda Suzuki" }] }),
   component: MisCitas,
 });
+
+// Estructura enriquecida que ahora devuelve el backend
+interface CitaItem {
+  id: number;
+  turno: string;
+  fecha_hora: string;
+  estado: string;
+  notas: string | null;
+  servicio: { id: number; nombre: string };
+  moto: { id: number; placa: string; modelo: string };
+}
 
 function formatHora(iso: string): string {
   const d = new Date(iso);
@@ -20,31 +31,28 @@ function formatHora(iso: string): string {
 }
 
 function formatFechaFromIso(iso: string): string {
-  // Backend returns "2026-06-23T09:00:00" (no Z, treated as local)
   const datePart = iso.split("T")[0];
   return formatFechaLarga(datePart);
-}
-
-function servicioNombre(id: number): string {
-  return SERVICIOS.find((s) => s.id === id)?.nombre ?? `Servicio #${id}`;
-}
-
-function servicioIcono(id: number): string {
-  return SERVICIOS.find((s) => s.id === id)?.icono ?? "🔧";
 }
 
 const ESTADO_LABEL: Record<string, { label: string; color: string }> = {
   pendiente: { label: "Pendiente", color: "var(--warning)" },
   confirmada: { label: "Confirmada", color: "var(--info)" },
   en_proceso: { label: "En proceso", color: "var(--info)" },
+  completada: { label: "Completada", color: "var(--success)" },
+  cancelada: { label: "Cancelada", color: "var(--text-muted)" },
+  no_asistio: { label: "No asistió", color: "var(--suzuki-red)" },
 };
+
+// Estados que cuentan como "próximos/activos" (accionables)
+const ESTADOS_ACTIVOS = ["pendiente", "confirmada", "en_proceso"];
 
 function MisCitas() {
   const navigate = useNavigate();
   const currentClient = useAppStore((s) => s.currentClient);
   const { warningRef, countdownRef } = useIdleTimeout();
 
-  const [citas, setCitas] = useState<CitaResponse[] | null>(null);
+  const [citas, setCitas] = useState<CitaItem[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string>("");
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
@@ -60,7 +68,7 @@ function MisCitas() {
     setLoading(true);
     setLoadError("");
     listarCitasCliente(currentClient.id)
-      .then((data) => { if (active) { setCitas(data); setLoading(false); } })
+      .then((data: any) => { if (active) { setCitas(data); setLoading(false); } })
       .catch((err) => {
         if (!active) return;
         console.error("[MIS-CITAS] error cargando:", err);
@@ -77,9 +85,7 @@ function MisCitas() {
     setCancelError("");
     try {
       await cancelarCita(citaId);
-      console.log("[MIS-CITAS] cita cancelada:", citaId);
-      // Refresh list
-      const fresh = await listarCitasCliente(currentClient.id);
+      const fresh: any = await listarCitasCliente(currentClient.id);
       setCitas(fresh);
       setConfirmingId(null);
     } catch (err) {
@@ -90,8 +96,64 @@ function MisCitas() {
     }
   };
 
+  // Separar en Próximas (activas y futuras) e Historial (todo lo demás)
+  const ahora = Date.now();
+  const proximas = (citas ?? []).filter(
+    (c) => ESTADOS_ACTIVOS.includes(c.estado) && new Date(c.fecha_hora).getTime() >= ahora
+  ).sort((a, b) => new Date(a.fecha_hora).getTime() - new Date(b.fecha_hora).getTime());
+
+  const historial = (citas ?? []).filter(
+    (c) => !proximas.includes(c)
+  ).sort((a, b) => new Date(b.fecha_hora).getTime() - new Date(a.fecha_hora).getTime());
+
+  const renderCard = (c: CitaItem, esProxima: boolean) => {
+    const estado = ESTADO_LABEL[c.estado] ?? { label: c.estado, color: "var(--text-muted)" };
+    const canCancel = esProxima && (c.estado === "pendiente" || c.estado === "confirmada");
+    return (
+      <div
+        key={c.id}
+        className="rounded-lg bg-[var(--bg-secondary)] border-l-4 p-4 shadow-sm"
+        style={{ borderColor: esProxima ? "var(--suzuki-blue)" : "var(--text-muted)" }}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <span className="font-display font-bold text-xl text-[var(--suzuki-red)]">{c.turno}</span>
+          <span
+            className="px-2 py-1 rounded-full text-xs border font-medium"
+            style={{ borderColor: estado.color, color: estado.color }}
+          >
+            {estado.label}
+          </span>
+        </div>
+        <p className="font-body text-[var(--white)] text-sm">{c.servicio.nombre}</p>
+        <p className="font-body text-[var(--text-muted)] text-xs mt-0.5">
+          {c.moto.modelo} · {c.moto.placa}
+        </p>
+        <p className="font-body text-[var(--white)] text-sm mt-1">
+          {formatFechaFromIso(c.fecha_hora)}
+        </p>
+        <p className="font-body text-[var(--white)] text-sm">
+          {formatHora(c.fecha_hora)}
+        </p>
+
+        {canCancel && (
+          <button
+            onClick={() => { setConfirmingId(c.id); setCancelError(""); }}
+            className="touch-btn mt-3 h-11 px-4 rounded-lg bg-[var(--bg-tertiary)] text-[var(--suzuki-red)] text-sm font-display border border-[var(--suzuki-red)]/40 w-full"
+          >
+            ✕ Cancelar cita
+          </button>
+        )}
+        {esProxima && c.estado === "en_proceso" && (
+          <p className="mt-3 text-xs text-[var(--text-muted)] italic">
+            Esta cita ya está siendo atendida en el taller.
+          </p>
+        )}
+      </div>
+    );
+  };
+
   return (
-    <div className="bg-carbon min-h-screen flex flex-col animate-slide-in">
+    <div className="min-h-screen bg-[var(--bg-primary)] flex flex-col">
       <div className="h-[60px] flex items-center justify-between px-4 bg-[var(--bg-secondary)] border-b border-[var(--text-muted)]/20 shrink-0">
         <button
           onClick={() => navigate({ to: "/servicios" })}
@@ -104,9 +166,7 @@ function MisCitas() {
       </div>
 
       <div className="px-6 py-4 shrink-0">
-        <p className="font-display text-base text-[var(--white)]">
-          {currentClient.nombre}
-        </p>
+        <p className="font-display text-base text-[var(--white)]">{currentClient.nombre}</p>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pb-6">
@@ -119,20 +179,17 @@ function MisCitas() {
 
         {!loading && loadError && (
           <div className="p-4 rounded-lg bg-[var(--suzuki-red)]/15 border border-[var(--suzuki-red)]/40">
-            <p className="font-body text-sm text-[var(--white)]">⚠️ {loadError}</p>
+            <p className="font-body text-sm text-[var(--white)]">⚠ {loadError}</p>
           </div>
         )}
 
         {!loading && !loadError && citas && citas.length === 0 && (
           <div className="text-center py-16">
             <p className="text-5xl mb-3">📅</p>
-            <p className="font-display text-lg text-[var(--white)]">No tiene citas activas</p>
-            <p className="font-body text-sm text-[var(--text-muted)] mt-2">
-              Vuelva al menú principal para agendar una.
-            </p>
+            <p className="font-display text-lg text-[var(--white)]">No tiene citas registradas</p>
             <button
               onClick={() => navigate({ to: "/servicios" })}
-              className="touch-btn mt-6 h-12 px-6 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display"
+              className="touch-btn mt-6 h-12 px-6 rounded-lg bg-[var(--suzuki-blue)] text-white font-display"
             >
               Agendar nueva cita
             </button>
@@ -140,48 +197,34 @@ function MisCitas() {
         )}
 
         {!loading && citas && citas.length > 0 && (
-          <div className="space-y-3">
-            {citas.map((c) => {
-              const estado = ESTADO_LABEL[c.estado] ?? { label: c.estado, color: "var(--text-muted)" };
-              const canCancel = c.estado === "pendiente" || c.estado === "confirmada";
-              const turno = `T-${String(c.id).padStart(3, "0")}`;
-              return (
-                <div key={c.id} className="rounded-lg bg-[var(--bg-secondary)] border-l-4 border-[var(--suzuki-blue)] p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <span className="font-display font-bold text-xl text-[var(--suzuki-red)]">{turno}</span>
-                    <span
-                      className="px-2 py-1 rounded-full text-xs border"
-                      style={{ borderColor: estado.color, color: estado.color }}
-                    >
-                      {estado.label}
-                    </span>
-                  </div>
-                  <p className="font-body text-[var(--white)] text-sm">
-                    {servicioIcono(c.servicio_id)} {servicioNombre(c.servicio_id)}
-                  </p>
-                  <p className="font-body text-[var(--white)] text-sm mt-1">
-                    📅 {formatFechaFromIso(c.fecha_hora)}
-                  </p>
-                  <p className="font-body text-[var(--white)] text-sm">
-                    🕐 {formatHora(c.fecha_hora)}
-                  </p>
-
-                  {canCancel && (
-                    <button
-                      onClick={() => { setConfirmingId(c.id); setCancelError(""); }}
-                      className="touch-btn mt-3 h-11 px-4 rounded-lg bg-[var(--bg-tertiary)] text-[var(--suzuki-red)] text-sm font-display border border-[var(--suzuki-red)]/40 w-full"
-                    >
-                      ✗ Cancelar cita
-                    </button>
-                  )}
-                  {!canCancel && c.estado === "en_proceso" && (
-                    <p className="mt-3 text-xs text-[var(--text-muted)] italic">
-                      Esta cita ya está siendo atendida en el taller.
-                    </p>
-                  )}
+          <div className="space-y-6">
+            {/* Próximas */}
+            <div>
+              <h3 className="font-display text-sm uppercase tracking-wider text-[var(--suzuki-blue)] mb-3">
+                Próximas citas {proximas.length > 0 && `(${proximas.length})`}
+              </h3>
+              {proximas.length > 0 ? (
+                <div className="space-y-3">
+                  {proximas.map((c) => renderCard(c, true))}
                 </div>
-              );
-            })}
+              ) : (
+                <p className="font-body text-sm text-[var(--text-muted)] italic">
+                  No tiene citas próximas. Puede agendar una nueva desde el menú de servicios.
+                </p>
+              )}
+            </div>
+
+            {/* Historial */}
+            {historial.length > 0 && (
+              <div>
+                <h3 className="font-display text-sm uppercase tracking-wider text-[var(--text-muted)] mb-3">
+                  Historial ({historial.length})
+                </h3>
+                <div className="space-y-3">
+                  {historial.map((c) => renderCard(c, false))}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -197,7 +240,7 @@ function MisCitas() {
 
             {cancelError && (
               <div className="mt-4 p-3 rounded-lg bg-[var(--suzuki-red)]/15 border border-[var(--suzuki-red)]/40">
-                <p className="font-body text-sm text-[var(--white)]">⚠️ {cancelError}</p>
+                <p className="font-body text-sm text-[var(--white)]">⚠ {cancelError}</p>
               </div>
             )}
 
@@ -212,7 +255,7 @@ function MisCitas() {
               <button
                 onClick={() => handleCancel(confirmingId)}
                 disabled={cancellingId !== null}
-                className="touch-btn flex-1 h-14 rounded-lg bg-[var(--suzuki-red)] text-[var(--white)] font-display flex items-center justify-center gap-2 disabled:opacity-60"
+                className="touch-btn flex-1 h-14 rounded-lg bg-[var(--suzuki-red)] text-white font-display flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {cancellingId !== null ? (
                   <>

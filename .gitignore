@@ -32,7 +32,6 @@ dist-ssr
 *.sw?
 
 # TurnoMoto backups (locales, no subir)
-*.bak
-*.bak2
+*.bak*
 .bak_colorfix/
 .bak_indicators/

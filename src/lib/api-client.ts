@@ -1,6 +1,7 @@
 // src/lib/api-client.ts
 // Typed fetch wrapper for the TurnoMoto backend.
 import { API_BASE } from "./api-config";
+import { useAdminAuth } from "./admin-auth";
 
 export class ApiError extends Error {
   constructor(public status: number, message: string, public detail?: unknown) {
@@ -12,10 +13,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${API_BASE}${path}`;
   let response: Response;
   try {
+    const token = useAdminAuth.getState().token;
     response = await fetch(url, {
       ...init,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...(init?.headers ?? {}),
       },
     });
@@ -187,7 +190,7 @@ export function listarCitasDelDia(fecha: string): Promise<CitaTaller[]> {
   return api.get<CitaTaller[]>(`/citas?fecha=${encodeURIComponent(fecha)}`);
 }
 
-export type EstadoCita = "pendiente" | "confirmada" | "en_proceso" | "completada" | "cancelada";
+export type EstadoCita = "pendiente" | "confirmada" | "en_proceso" | "completada" | "cancelada" | "no_asistio";
 
 export function actualizarEstadoCita(citaId: number, estado: EstadoCita) {
   return api.patch(`/citas/${citaId}/estado`, { estado });

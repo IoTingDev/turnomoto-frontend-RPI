@@ -13,7 +13,7 @@ export function useAdminGuard(allowedRoles: ("mecanico" | "gerencia")[]) {
     }
   }, []);
 
-  useIdleTimer(5 * 60 * 1000, () => {
+  useIdleTimer(15 * 60 * 1000, () => {
     logout();
     navigate({ to: "/" });
   });
