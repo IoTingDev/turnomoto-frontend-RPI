@@ -30,3 +30,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# TurnoMoto backups (locales, no subir)
+*.bak
+*.bak2
+.bak_colorfix/
+.bak_indicators/

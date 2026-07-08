@@ -102,6 +102,33 @@ export const FESTIVOS_2026 = new Set<string>([
 export const HORARIOS_MANANA = ["08:00", "09:00", "10:00", "11:00", "12:00"];
 export const HORARIOS_TARDE = ["14:00", "15:00", "16:00"];
 
+// Horarios disponibles por día de semana (0 = Domingo, 6 = Sábado).
+// Lunes-Viernes: jornada completa. Sábado: solo mañana hasta 11 AM (cierre a 12).
+// Domingos no aparece en el picker por la lógica de getProximosDias.
+export const HORARIOS_POR_DIA: Record<number, string[]> = {
+  1: ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+  2: ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+  3: ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+  4: ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+  5: ["08:00", "09:00", "10:00", "11:00", "12:00", "14:00", "15:00", "16:00"],
+  6: ["08:00", "09:00", "10:00", "11:00"],
+};
+
+export function horariosDelDia(fecha: string): { manana: string[]; tarde: string[] } {
+  const [y, m, d] = fecha.split("-").map(Number);
+  const date = new Date(y, m - 1, d);
+  const dayOfWeek = date.getDay();
+  const horarios = HORARIOS_POR_DIA[dayOfWeek] ?? [];
+  const manana: string[] = [];
+  const tarde: string[] = [];
+  for (const h of horarios) {
+    const hour = parseInt(h.split(":")[0]);
+    if (hour < 14) manana.push(h);
+    else tarde.push(h);
+  }
+  return { manana, tarde };
+}
+
 // Mock occupied slots: key = `${fecha}_${hora}`
 export function getOcupados(fecha: string, diasHabiles: string[]): Set<string> {
   const ocupados = new Set<string>();
@@ -157,4 +184,18 @@ export function formatFechaLarga(fecha: string): string {
   const [y, m, d] = fecha.split("-").map(Number);
   const date = new Date(y, m - 1, d);
   return `${dias[date.getDay()]} ${d} de ${meses[m - 1]}, ${y}`;
+}
+
+// Iconos de servicios — metadata de UI, mantenida en frontend (no viaja por el backend)
+export const ICONOS_SERVICIOS: Record<string, string> = {
+  "Cambio de aceite y filtro": "🛢️",
+  "Revisión 10.000 km": "🔧",
+  "Revisión 20.000 km": "🔩",
+  "Cambio de pastillas de freno": "🔴",
+  "Ajuste de cadena": "⛓️",
+  "Diagnóstico general": "🔍",
+};
+
+export function iconoServicio(nombre: string): string {
+  return ICONOS_SERVICIOS[nombre] ?? "🔧";
 }

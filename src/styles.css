@@ -47,17 +47,23 @@
 
 :root {
   --radius: 0.625rem;
+  /* --- Marca Suzuki (acentos, sin cambios) --- */
   --suzuki-blue: #003399;
   --suzuki-red: #CC0000;
-  --bg-primary: #1A1A1A;
-  --bg-secondary: #2D2D2D;
-  --bg-tertiary: #3A3A3A;
-  --text-muted: #8C8C8C;
-  --disabled: #D4D4D4;
-  --white: #FFFFFF;
-  --success: #22C55E;
-  --warning: #EAB308;
-  --info: #3B82F6;
+  /* --- Esquema CLARO (anti-reflejo para pantalla glossy 1024x600) --- */
+  /* bg-primary ahora es el fondo claro de la pagina; bg-secondary las tarjetas blancas */
+  --bg-primary: #F4F6F9;
+  --bg-secondary: #FFFFFF;
+  --bg-tertiary: #E7ECF2;
+  /* text-muted ahora es texto secundario oscuro legible sobre claro */
+  --text-muted: #5B6673;
+  --disabled: #C3CAD3;
+  /* white ahora representa el color de texto PRINCIPAL (azul marino oscuro, alto contraste) */
+  /* se mantiene el nombre de la variable para no tocar los componentes que la referencian */
+  --white: #0F1A2A;
+  --success: #116632;
+  --warning: #8A6A00;
+  --info: #0C447C;
 }
 
 @layer base {
@@ -140,3 +146,16 @@
 /* Hide scrollbar for horizontal day picker */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* --- Kiosko: suprimir selección de texto y menús táctiles nativos --- */
+/* Evita que long-press dispare el menú contextual del navegador y que
+   el usuario seleccione texto. Los inputs SÍ permiten selección (para editar). */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+input, textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}

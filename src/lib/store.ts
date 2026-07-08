@@ -11,6 +11,7 @@ interface AppState {
   turnoCounter: number;
   lastTurno: string | null;
 
+  setCurrentNfcUid: (uid: string | null) => void;
   startFlowRegistered: (client: ClienteConMotos) => void;
   startFlowNew: () => void;
   setClient: (client: ClienteConMotos) => void;
@@ -29,6 +30,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   selectedHora: null,
   turnoCounter: 0,
   lastTurno: null,
+
+  setCurrentNfcUid: (uid) => set({ currentNfcUid: uid }),
 
   startFlowRegistered: (client) =>
     set({

@@ -1,6 +1,3 @@
-// NOTE: In production, /dashboard requires admin authentication.
-// In this Lovable mock both /mecanico and /dashboard are publicly accessible from the kiosk's gear menu for demo purposes only.
-
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -9,6 +6,7 @@ import {
   LineChart, Line, CartesianGrid, Area, AreaChart,
 } from "recharts";
 import { TURNOS_DEMO_MECANICO } from "@/lib/mock-data";
+import { useAdminGuard } from "@/hooks/use-admin-guard";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard Gerencia — Agenda de Taller Suzuki" }] }),
@@ -35,11 +33,12 @@ function useCountUp(target: number, duration = 1500) {
 }
 
 function Dashboard() {
+  useAdminGuard(["gerencia"]);
   const navigate = useNavigate();
   const [periodo, setPeriodo] = useState<Periodo>("hoy");
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-white">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--white)]">
       <header className="px-6 py-5 border-b border-[var(--text-muted)]/20 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate({ to: "/" })} className="touch-btn h-11 px-4 rounded-lg bg-[var(--bg-tertiary)] text-sm font-display">← Volver al kiosko</button>
@@ -187,7 +186,7 @@ function KpiCard({ label, target, suffix, delta, deltaColor, subtitle, progress 
   return (
     <div className="bg-[var(--bg-secondary)] rounded-xl p-5 border border-[var(--text-muted)]/15">
       <p className="font-body text-sm text-[var(--text-muted)]">{label}</p>
-      <p className="font-display font-bold text-4xl mt-2 text-white">
+      <p className="font-display font-bold text-4xl mt-2 text-[var(--white)]">
         {display}{suffix}
       </p>
       {delta && <p className={`mt-1 text-sm ${deltaColor === "success" ? "text-[var(--success)]" : ""}`}>{delta} vs periodo anterior</p>}
@@ -204,7 +203,7 @@ function KpiCard({ label, target, suffix, delta, deltaColor, subtitle, progress 
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="bg-[var(--bg-secondary)] rounded-xl p-5 border border-[var(--text-muted)]/15">
-      <h3 className="font-display text-lg text-white mb-3">{title}</h3>
+      <h3 className="font-display text-lg text-[var(--white)] mb-3">{title}</h3>
       {children}
     </div>
   );

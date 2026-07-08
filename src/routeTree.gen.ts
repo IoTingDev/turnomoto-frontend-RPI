@@ -11,6 +11,8 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ServiciosRouteImport } from './routes/servicios'
 import { Route as RegistroRouteImport } from './routes/registro'
+import { Route as PerfilRouteImport } from './routes/perfil'
+import { Route as MisCitasRouteImport } from './routes/mis-citas'
 import { Route as MecanicoRouteImport } from './routes/mecanico'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ConfirmacionRouteImport } from './routes/confirmacion'
@@ -25,6 +27,16 @@ const ServiciosRoute = ServiciosRouteImport.update({
 const RegistroRoute = RegistroRouteImport.update({
   id: '/registro',
   path: '/registro',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerfilRoute = PerfilRouteImport.update({
+  id: '/perfil',
+  path: '/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MisCitasRoute = MisCitasRouteImport.update({
+  id: '/mis-citas',
+  path: '/mis-citas',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MecanicoRoute = MecanicoRouteImport.update({
@@ -59,6 +71,8 @@ export interface FileRoutesByFullPath {
   '/confirmacion': typeof ConfirmacionRoute
   '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
+  '/mis-citas': typeof MisCitasRoute
+  '/perfil': typeof PerfilRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
@@ -68,6 +82,8 @@ export interface FileRoutesByTo {
   '/confirmacion': typeof ConfirmacionRoute
   '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
+  '/mis-citas': typeof MisCitasRoute
+  '/perfil': typeof PerfilRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
@@ -78,6 +94,8 @@ export interface FileRoutesById {
   '/confirmacion': typeof ConfirmacionRoute
   '/dashboard': typeof DashboardRoute
   '/mecanico': typeof MecanicoRoute
+  '/mis-citas': typeof MisCitasRoute
+  '/perfil': typeof PerfilRoute
   '/registro': typeof RegistroRoute
   '/servicios': typeof ServiciosRoute
 }
@@ -89,6 +107,8 @@ export interface FileRouteTypes {
     | '/confirmacion'
     | '/dashboard'
     | '/mecanico'
+    | '/mis-citas'
+    | '/perfil'
     | '/registro'
     | '/servicios'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +118,8 @@ export interface FileRouteTypes {
     | '/confirmacion'
     | '/dashboard'
     | '/mecanico'
+    | '/mis-citas'
+    | '/perfil'
     | '/registro'
     | '/servicios'
   id:
@@ -107,6 +129,8 @@ export interface FileRouteTypes {
     | '/confirmacion'
     | '/dashboard'
     | '/mecanico'
+    | '/mis-citas'
+    | '/perfil'
     | '/registro'
     | '/servicios'
   fileRoutesById: FileRoutesById
@@ -117,6 +141,8 @@ export interface RootRouteChildren {
   ConfirmacionRoute: typeof ConfirmacionRoute
   DashboardRoute: typeof DashboardRoute
   MecanicoRoute: typeof MecanicoRoute
+  MisCitasRoute: typeof MisCitasRoute
+  PerfilRoute: typeof PerfilRoute
   RegistroRoute: typeof RegistroRoute
   ServiciosRoute: typeof ServiciosRoute
 }
@@ -135,6 +161,20 @@ declare module '@tanstack/react-router' {
       path: '/registro'
       fullPath: '/registro'
       preLoaderRoute: typeof RegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/perfil': {
+      id: '/perfil'
+      path: '/perfil'
+      fullPath: '/perfil'
+      preLoaderRoute: typeof PerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mis-citas': {
+      id: '/mis-citas'
+      path: '/mis-citas'
+      fullPath: '/mis-citas'
+      preLoaderRoute: typeof MisCitasRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mecanico': {
@@ -181,9 +221,21 @@ const rootRouteChildren: RootRouteChildren = {
   ConfirmacionRoute: ConfirmacionRoute,
   DashboardRoute: DashboardRoute,
   MecanicoRoute: MecanicoRoute,
+  MisCitasRoute: MisCitasRoute,
+  PerfilRoute: PerfilRoute,
   RegistroRoute: RegistroRoute,
   ServiciosRoute: ServiciosRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
