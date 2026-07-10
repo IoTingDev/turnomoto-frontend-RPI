@@ -116,14 +116,14 @@ function Confirmacion() {
           {horarioOcupado ? (
             <button
               onClick={() => navigate({ to: "/agenda" })}
-              className="touch-btn mt-6 h-14 px-10 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display text-lg w-full"
+              className="touch-btn mt-6 h-14 px-10 rounded-lg bg-[var(--suzuki-blue)] text-white font-display text-lg w-full"
             >
               ← Cambiar horario
             </button>
           ) : (
             <button
               onClick={submit}
-              className="touch-btn mt-6 h-14 px-10 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display text-lg w-full"
+              className="touch-btn mt-6 h-14 px-10 rounded-lg bg-[var(--suzuki-blue)] text-white font-display text-lg w-full"
             >
               Reintentar
             </button>
@@ -178,7 +178,7 @@ function Confirmacion() {
 
           <button
             onClick={() => { resetFlow(); navigate({ to: "/" }); }}
-            className="touch-btn mt-4 h-14 px-10 rounded-lg bg-[var(--suzuki-red)] text-[var(--white)] font-display text-lg"
+            className="touch-btn mt-4 h-14 px-10 rounded-lg bg-[var(--suzuki-red)] text-white font-display text-lg"
           >
             Listo ✓
           </button>

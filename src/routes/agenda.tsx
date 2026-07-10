@@ -180,7 +180,7 @@ function Agenda() {
         <button
           disabled={!fecha || !hora || ocupados.has(hora ?? "") || slotIsPast(hora ?? "")}
           onClick={confirm}
-          className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-[var(--white)] font-display text-lg"
+          className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-white font-display text-lg"
         >
           Confirmar cita ✓
         </button>

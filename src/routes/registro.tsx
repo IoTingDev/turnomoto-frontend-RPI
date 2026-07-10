@@ -217,7 +217,7 @@ function Step1({ data, setData, errors, onNext }: any) {
         <input inputMode="email" value={data.email} onChange={(e) => setData({ ...data, email: e.target.value })} className={inputCls(errors.email)} />
       </Field>
 
-      <button onClick={onNext} className="touch-btn w-full h-14 mt-6 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display text-lg">
+      <button onClick={onNext} className="touch-btn w-full h-14 mt-6 rounded-lg bg-[var(--suzuki-blue)] text-white font-display text-lg">
         Siguiente →
       </button>
     </div>
@@ -287,7 +287,7 @@ function Step2({ data, setData, errors, onNext }: any) {
         <input inputMode="numeric" value={data.kilometraje} onChange={(e) => setData({ ...data, kilometraje: e.target.value.replace(/\D/g, "") })} className={inputCls()} placeholder="8500" />
       </Field>
 
-      <button onClick={onNext} className="touch-btn w-full h-14 mt-6 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display text-lg">
+      <button onClick={onNext} className="touch-btn w-full h-14 mt-6 rounded-lg bg-[var(--suzuki-blue)] text-white font-display text-lg">
         Siguiente →
       </button>
     </div>
@@ -361,7 +361,7 @@ function Step3({ data, submitting, apiError, onEditPersonal, onEditMoto, onConfi
       <button
         onClick={onConfirm}
         disabled={submitting}
-        className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-[var(--white)] font-display text-lg flex items-center justify-center gap-3"
+        className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-white font-display text-lg flex items-center justify-center gap-3"
       >
         {submitting ? (
           <>

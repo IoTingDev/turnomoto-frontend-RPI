@@ -39,9 +39,9 @@ function toDateString(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// Genera ventana de días hábiles (L-V): N atrás + hoy + M adelante
+// Genera ventana de días hábiles (L-S): N atrás + hoy + M adelante
 function buildDayWindow(diasAtras: number, diasAdelante: number): Date[] {
-  const esHabil = (d: Date) => d.getDay() !== 0 && d.getDay() !== 6;
+  const esHabil = (d: Date) => d.getDay() !== 0;
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
 

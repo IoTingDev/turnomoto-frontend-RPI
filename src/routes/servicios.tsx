@@ -26,7 +26,7 @@ function Servicios() {
       <div className="bg-carbon min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="font-body text-[var(--white)] mb-4">No hay cliente activo.</p>
-          <button onClick={() => navigate({ to: "/" })} className="touch-btn h-14 px-6 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] font-display">
+          <button onClick={() => navigate({ to: "/" })} className="touch-btn h-14 px-6 rounded-lg bg-[var(--suzuki-blue)] text-white font-display">
             Volver al inicio
           </button>
         </div>
@@ -96,7 +96,7 @@ function Servicios() {
             </p>
             <button
               onClick={() => refetch()}
-              className="touch-btn h-10 px-4 rounded-lg bg-[var(--suzuki-blue)] text-[var(--white)] text-sm font-display"
+              className="touch-btn h-10 px-4 rounded-lg bg-[var(--suzuki-blue)] text-white text-sm font-display"
             >
               Reintentar
             </button>
@@ -128,7 +128,7 @@ function Servicios() {
         <button
           disabled={!selectedServicio}
           onClick={() => navigate({ to: "/agenda" })}
-          className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-[var(--white)] font-display text-lg"
+          className="touch-btn w-full h-14 rounded-lg bg-[var(--suzuki-red)] disabled:bg-[var(--bg-tertiary)] disabled:text-[var(--text-muted)] text-white font-display text-lg"
         >
           Continuar →
         </button>
