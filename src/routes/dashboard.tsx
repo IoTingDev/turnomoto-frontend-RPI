@@ -1,12 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell,
-  PieChart, Pie, Tooltip, Legend,
-  LineChart, Line, CartesianGrid, Area, AreaChart,
-} from "recharts";
-import { TURNOS_DEMO_MECANICO } from "@/lib/mock-data";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
 import { useAdminGuard } from "@/hooks/use-admin-guard";
+import { obtenerResumenGerencia, type ResumenGerencia } from "@/lib/api-client";
+import { useTallerSocket } from "@/lib/use-taller-socket";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard Gerencia — Agenda de Taller Suzuki" }] }),
@@ -15,15 +12,19 @@ export const Route = createFileRoute("/dashboard")({
 
 type Periodo = "hoy" | "semana" | "mes";
 
-function useCountUp(target: number, duration = 1500) {
+const C = {
+  completada: "#003399", pendiente: "#6B9BD1", cancelada: "#CBD3DD",
+  no_asistio: "#CC0000", verde: "#3B6D11", rojo: "#A32D2D", azul: "#185FA5",
+};
+
+function useCountUp(target: number, duration = 1200) {
   const [val, setVal] = useState(0);
   const ref = useRef<number | null>(null);
   useEffect(() => {
     const start = performance.now();
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - t, 4); // easeOutQuart
-      setVal(target * eased);
+      setVal(target * (1 - Math.pow(1 - t, 4)));
       if (t < 1) ref.current = requestAnimationFrame(tick);
     };
     ref.current = requestAnimationFrame(tick);
@@ -32,170 +33,187 @@ function useCountUp(target: number, duration = 1500) {
   return val;
 }
 
+function rangoDe(periodo: Periodo): { desde: string; hasta: string } {
+  const hoy = new Date();
+  const y = hoy.getFullYear(), m = hoy.getMonth(), d = hoy.getDate();
+  const fin = new Date(y, m, d, 23, 59, 59);
+  let ini: Date;
+  if (periodo === "hoy") ini = new Date(y, m, d, 0, 0, 0);
+  else if (periodo === "semana") { const dow = (hoy.getDay() + 6) % 7; ini = new Date(y, m, d - dow, 0, 0, 0); }
+  else ini = new Date(y, m, 1, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const fmt = (x: Date) => `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}T${pad(x.getHours())}:${pad(x.getMinutes())}:${pad(x.getSeconds())}`;
+  return { desde: fmt(ini), hasta: fmt(fin) };
+}
+
+function fmtDia(f: string): string {
+  const p = String(f).split("-");
+  return p.length === 3 ? `${p[2]}/${p[1]}` : String(f);
+}
+
 function Dashboard() {
   useAdminGuard(["gerencia"]);
   const navigate = useNavigate();
-  const [periodo, setPeriodo] = useState<Periodo>("hoy");
+  const [periodo, setPeriodo] = useState<Periodo>("mes");
+  const [data, setData] = useState<ResumenGerencia | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [nonce, setNonce] = useState(0);
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true); setError(null);
+    const { desde, hasta } = rangoDe(periodo);
+    obtenerResumenGerencia(desde, hasta)
+      .then((r) => { if (!cancel) setData(r); })
+      .catch((e) => { if (!cancel) setError(e?.message ?? "Error al cargar"); })
+      .finally(() => { if (!cancel) setLoading(false); });
+    return () => { cancel = true; };
+  }, [periodo, nonce]);
+
+  const [flash, setFlash] = useState(false);
+  useTallerSocket((ev) => {
+    if (ev.event_type === "cita_estado_cambiado" || ev.event_type === "cita_creada" || ev.event_type === "cita_cancelada") {
+      setNonce((n) => n + 1);
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 900);
+    }
+  });
+
+  const k = data?.kpis;
+  const sinDatos = !!data && data.kpis.citas_total.valor === 0;
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--white)]">
       <header className="px-6 py-5 border-b border-[var(--text-muted)]/20 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate({ to: "/" })} className="touch-btn h-11 px-4 rounded-lg bg-[var(--bg-tertiary)] text-sm font-display">← Volver al kiosko</button>
-          <h1 className="font-display font-bold text-xl md:text-2xl">📊 Dashboard de Gestión — Agenda de Taller Suzuki</h1>
+          <h1 className="font-display font-bold text-xl md:text-2xl">📊 Panel de gerencia</h1>
         </div>
         <div className="flex gap-1 bg-[var(--bg-secondary)] rounded-lg p-1">
           {(["hoy", "semana", "mes"] as Periodo[]).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriodo(p)}
-              className={`touch-btn h-10 px-4 rounded-md font-display text-sm capitalize ${periodo === p ? "border-b-2 border-[var(--suzuki-red)] bg-[var(--bg-tertiary)]" : "text-[var(--text-muted)]"}`}
-            >
-              {p === "hoy" ? "Hoy" : p === "semana" ? "Esta semana" : "Este mes"}
+            <button key={p} onClick={() => setPeriodo(p)}
+              className={`touch-btn h-10 px-4 rounded-md font-display text-sm ${periodo === p ? "bg-[var(--suzuki-blue)] text-white" : "text-[var(--text-muted)]"}`}>
+              {p === "hoy" ? "Hoy" : p === "semana" ? "Semana" : "Mes"}
             </button>
           ))}
         </div>
       </header>
 
       <main className="px-6 py-6 max-w-7xl mx-auto space-y-6">
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Total turnos agendados" target={47} suffix="" delta="↑12%" deltaColor="success" />
-          <KpiCard label="Tasa de cumplimiento" target={87} suffix="%" progress={87} />
-          <KpiCard label="Tiempo promedio de atención" target={52} suffix=" min" subtitle="meta: 45 min" />
-          <KpiCard label="Clientes nuevos" target={8} suffix="" delta="↑3" deltaColor="success" />
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <ChartCard title="Turnos por hora del día">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={[
-                { h: "8:00", v: 5 }, { h: "9:00", v: 8 }, { h: "10:00", v: 12 },
-                { h: "11:00", v: 9 }, { h: "12:00", v: 4 }, { h: "14:00", v: 7 },
-                { h: "15:00", v: 11 }, { h: "16:00", v: 6 },
-              ]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-                <XAxis dataKey="h" stroke="#8C8C8C" />
-                <YAxis stroke="#8C8C8C" />
-                <Tooltip contentStyle={{ background: "#2D2D2D", border: "1px solid #3A3A3A", color: "#fff" }} />
-                <Bar dataKey="v" radius={[6, 6, 0, 0]}>
-                  {[5, 8, 12, 9, 4, 7, 11, 6].map((v, i) => {
-                    const max = 12;
-                    return <Cell key={i} fill={v === max ? "#CC0000" : "#003399"} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard title="Servicios más solicitados">
-            <ResponsiveContainer width="100%" height={260}>
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: "Cambio de aceite", value: 35 },
-                    { name: "Revisión 10.000 km", value: 22 },
-                    { name: "Pastillas de freno", value: 18 },
-                    { name: "Diagnóstico", value: 13 },
-                    { name: "Ajuste de cadena", value: 8 },
-                    { name: "Revisión 20.000 km", value: 4 },
-                  ]}
-                  innerRadius={55}
-                  outerRadius={90}
-                  paddingAngle={2}
-                  dataKey="value"
-                >
-                  {["#CC0000", "#003399", "#3B82F6", "#22C55E", "#EAB308", "#8C8C8C"].map((c, i) => (
-                    <Cell key={i} fill={c} stroke="#1A1A1A" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: "#2D2D2D", border: "1px solid #3A3A3A", color: "#fff" }} />
-                <Legend wrapperStyle={{ fontSize: 12, color: "#fff" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <ChartCard title="Tendencia semanal de turnos">
-          <ResponsiveContainer width="100%" height={240}>
-            <AreaChart data={[
-              { d: "Lun", v: 5 }, { d: "Mar", v: 7 }, { d: "Mié", v: 6 },
-              { d: "Jue", v: 8 }, { d: "Vie", v: 9 }, { d: "Sáb", v: 7 }, { d: "Dom", v: 10 },
-            ]}>
-              <defs>
-                <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#CC0000" stopOpacity={0.5} />
-                  <stop offset="100%" stopColor="#CC0000" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#3a3a3a" />
-              <XAxis dataKey="d" stroke="#8C8C8C" />
-              <YAxis stroke="#8C8C8C" />
-              <Tooltip contentStyle={{ background: "#2D2D2D", border: "1px solid #3A3A3A", color: "#fff" }} />
-              <Area type="monotone" dataKey="v" stroke="#CC0000" strokeWidth={2.5} fill="url(#grad)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </ChartCard>
-
-        {/* Table */}
-        <ChartCard title="Últimos turnos agendados">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-[var(--text-muted)] border-b border-[var(--text-muted)]/20">
-                  <th className="py-2 px-2 font-display">Hora</th>
-                  <th className="py-2 px-2 font-display">N° Turno</th>
-                  <th className="py-2 px-2 font-display">Cliente</th>
-                  <th className="py-2 px-2 font-display">Moto</th>
-                  <th className="py-2 px-2 font-display">Servicio</th>
-                  <th className="py-2 px-2 font-display">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {TURNOS_DEMO_MECANICO.map((t, i) => {
-                  const color = t.estado === "completada" ? "var(--success)" : t.estado === "en_proceso" ? "var(--info)" : "var(--warning)";
-                  const label = t.estado === "en_proceso" ? "En proceso" : t.estado === "completada" ? "Completada" : "Pendiente";
-                  return (
-                    <tr key={i} className="border-b border-[var(--text-muted)]/10">
-                      <td className="py-2 px-2 font-display">{t.hora}</td>
-                      <td className="py-2 px-2 font-display text-[var(--suzuki-red)]">{t.turno}</td>
-                      <td className="py-2 px-2">{t.cliente}</td>
-                      <td className="py-2 px-2 text-[var(--text-muted)]">{t.moto} · {t.placa}</td>
-                      <td className="py-2 px-2">{t.servicio}</td>
-                      <td className="py-2 px-2">
-                        <span className="px-2 py-1 rounded-full text-xs border" style={{ borderColor: color, color }}>
-                          {label}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {loading && <div className="py-20 text-center text-[var(--text-muted)] font-display">Cargando datos…</div>}
+        {error && !loading && (
+          <div className="py-16 text-center">
+            <p className="text-[var(--suzuki-red)] font-display text-lg">No se pudieron cargar los datos</p>
+            <p className="text-[var(--text-muted)] text-sm mt-1">{error}</p>
+            <button onClick={() => setNonce((n) => n + 1)} className="touch-btn mt-4 h-10 px-4 rounded-lg bg-[var(--suzuki-blue)] text-white text-sm">Reintentar</button>
           </div>
-        </ChartCard>
+        )}
+        {data && !loading && !error && (
+          <>
+            <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 transition-all duration-500 ${flash ? "ring-2 ring-[var(--suzuki-blue)] ring-offset-2 rounded-xl" : ""}`}>
+              <KpiCard label="Citas del período" value={k!.citas_total.valor} delta={k!.citas_total.delta_pct} deltaUnit="%" />
+              <KpiCard label="Cumplimiento" value={k!.cumplimiento_pct.valor} suffix="%" delta={k!.cumplimiento_pct.delta_pts} deltaUnit=" pts" />
+              <KpiCard label="Ausentismo" value={k!.ausentismo_pct.valor} suffix="%" delta={k!.ausentismo_pct.delta_pts} deltaUnit=" pts" invert valueColor={(k!.ausentismo_pct.valor ?? 0) > 15 ? C.rojo : undefined} />
+              <KpiCard label="Clientes" value={k!.clientes.total} subtitle={`${k!.clientes.nuevos} nuevos · ${k!.clientes.recurrentes} recurrentes`} />
+            </div>
+
+            {sinDatos ? (
+              <div className="bg-[var(--bg-secondary)] rounded-xl p-10 border border-[var(--text-muted)]/15 text-center">
+                <p className="font-display text-lg">Aún no hay citas en este período</p>
+                <p className="text-[var(--text-muted)] text-sm mt-1">Elija otro rango en el filtro superior.</p>
+              </div>
+            ) : (
+              <>
+                <ChartCard title="Citas por día · por estado">
+                  <div className="flex flex-wrap gap-4 text-xs text-[var(--text-muted)] mb-3">
+                    <LegendDot color={C.completada} label="Completada" />
+                    <LegendDot color={C.pendiente} label="Pendiente" />
+                    <LegendDot color={C.cancelada} label="Cancelada" />
+                    <LegendDot color={C.no_asistio} label="No asistió" />
+                  </div>
+                  <ResponsiveContainer width="100%" height={260}>
+                    <BarChart data={data.citas_por_dia}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#E7ECF2" vertical={false} />
+                      <XAxis dataKey="fecha" tickFormatter={fmtDia} stroke="#5B6673" fontSize={11} interval="preserveStartEnd" minTickGap={16} />
+                      <YAxis stroke="#5B6673" fontSize={11} allowDecimals={false} />
+                      <Tooltip labelFormatter={fmtDia} contentStyle={{ background: "#FFFFFF", border: "1px solid #E7ECF2", borderRadius: 8, color: "#0F1A2A", fontSize: 12 }} />
+                      <Bar dataKey="completada" stackId="a" fill={C.completada} />
+                      <Bar dataKey="pendiente" stackId="a" fill={C.pendiente} />
+                      <Bar dataKey="cancelada" stackId="a" fill={C.cancelada} />
+                      <Bar dataKey="no_asistio" stackId="a" fill={C.no_asistio} radius={[3, 3, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartCard>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <ChartCard title="Top servicios">
+                    <div className="space-y-3 pt-1">
+                      {data.top_servicios.length === 0 && <p className="text-[var(--text-muted)] text-sm">Sin datos.</p>}
+                      {data.top_servicios.map((s, i) => {
+                        const max = data.top_servicios[0]?.total || 1;
+                        const pct = Math.round((s.total / max) * 100);
+                        return (
+                          <div key={i}>
+                            <div className="flex justify-between text-sm text-[var(--text-muted)] mb-1"><span>{s.nombre}</span><span>{s.total}</span></div>
+                            <div className="h-2 rounded-full bg-[var(--bg-tertiary)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: C.completada }} /></div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ChartCard>
+
+                  <div className="relative bg-[var(--bg-secondary)] rounded-xl p-5 border border-[var(--text-muted)]/25 overflow-hidden">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-display text-lg text-[var(--white)]">Ingresos</h3>
+                      <span className="text-xs px-3 py-1 rounded-full text-white flex items-center gap-1" style={{ background: C.azul }}>🔒 Vista previa · Fase 2</span>
+                    </div>
+                    <div className="blur-[3px] opacity-50 pointer-events-none select-none">
+                      <p className="text-xs text-[var(--text-muted)]">Ingresos del mes</p>
+                      <p className="font-display font-bold text-3xl text-[var(--white)]">$4.820.000</p>
+                      <div className="flex gap-6 mt-2 text-sm text-[var(--text-muted)]">
+                        <span>Ticket promedio<br /><b className="text-[var(--white)]">$201.000</b></span>
+                        <span>Proyección<br /><b className="text-[var(--white)]">$6.1M</b></span>
+                      </div>
+                    </div>
+                    <p className="mt-3 pt-3 border-t border-[var(--text-muted)]/15 text-xs text-[var(--text-muted)] leading-relaxed">
+                      Cargue los precios de sus servicios y este módulo calcula ingresos reales, ticket promedio y proyección mensual.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
 }
 
-function KpiCard({ label, target, suffix, delta, deltaColor, subtitle, progress }: { label: string; target: number; suffix?: string; delta?: string; deltaColor?: "success"; subtitle?: string; progress?: number }) {
-  const v = useCountUp(target);
-  const display = Math.round(v);
+function LegendDot({ color, label }: { color: string; label: string }) {
+  return <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: color }} />{label}</span>;
+}
+
+function KpiCard({ label, value, suffix = "", delta, deltaUnit = "", invert, subtitle, valueColor }: {
+  label: string; value: number | null; suffix?: string; delta?: number | null; deltaUnit?: string; invert?: boolean; subtitle?: string; valueColor?: string;
+}) {
+  const animated = useCountUp(value ?? 0);
+  const display = value === null ? "—" : Math.round(animated);
+  let deltaEl = null;
+  if (delta !== undefined && delta !== null) {
+    const mejora = invert ? delta <= 0 : delta >= 0;
+    const arrow = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
+    const extra = invert && delta < 0 ? " mejora" : invert && delta > 0 ? " atención" : "";
+    deltaEl = <p className="mt-1 text-sm" style={{ color: mejora ? C.verde : C.rojo }}>{arrow} {Math.abs(delta)}{deltaUnit}{extra} vs anterior</p>;
+  } else if (delta === null) {
+    deltaEl = <p className="mt-1 text-sm text-[var(--text-muted)]">sin comparativa</p>;
+  }
   return (
     <div className="bg-[var(--bg-secondary)] rounded-xl p-5 border border-[var(--text-muted)]/15">
       <p className="font-body text-sm text-[var(--text-muted)]">{label}</p>
-      <p className="font-display font-bold text-4xl mt-2 text-[var(--white)]">
-        {display}{suffix}
-      </p>
-      {delta && <p className={`mt-1 text-sm ${deltaColor === "success" ? "text-[var(--success)]" : ""}`}>{delta} vs periodo anterior</p>}
-      {subtitle && <p className="mt-1 text-xs text-[var(--text-muted)]">{subtitle}</p>}
-      {progress !== undefined && (
-        <div className="h-2 rounded-full bg-[var(--bg-tertiary)] mt-3 overflow-hidden">
-          <div className="h-full bg-[var(--suzuki-red)] transition-all duration-1000" style={{ width: `${Math.min(100, v)}%` }} />
-        </div>
-      )}
+      <p className="font-display font-bold text-4xl mt-2" style={{ color: valueColor ?? "var(--white)" }}>{display}{value !== null ? suffix : ""}</p>
+      {deltaEl}
+      {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)]">{subtitle}</p>}
     </div>
   );
 }

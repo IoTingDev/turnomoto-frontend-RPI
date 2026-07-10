@@ -195,3 +195,22 @@ export type EstadoCita = "pendiente" | "confirmada" | "en_proceso" | "completada
 export function actualizarEstadoCita(citaId: number, estado: EstadoCita) {
   return api.patch(`/citas/${citaId}/estado`, { estado });
 }
+
+// ===== Gerencia (Business Intelligence) =====
+export interface ResumenGerencia {
+  periodo: { desde: string; hasta: string; dias: number };
+  kpis: {
+    citas_total: { valor: number; delta_pct: number | null };
+    cumplimiento_pct: { valor: number | null; delta_pts: number | null };
+    ausentismo_pct: { valor: number | null; delta_pts: number | null };
+    clientes: { total: number; nuevos: number; recurrentes: number };
+  };
+  citas_por_dia: Array<{ fecha: string; completada: number; pendiente: number; cancelada: number; no_asistio: number }>;
+  estados: Record<string, number>;
+  top_servicios: Array<{ nombre: string; total: number }>;
+}
+
+export function obtenerResumenGerencia(desde: string, hasta: string): Promise<ResumenGerencia> {
+  const qs = new URLSearchParams({ desde, hasta }).toString();
+  return api.get<ResumenGerencia>(`/gerencia/resumen?${qs}`);
+}
