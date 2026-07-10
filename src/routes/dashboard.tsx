@@ -85,7 +85,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--white)]">
-      <header className="px-6 py-5 border-b border-[var(--text-muted)]/20 flex items-center justify-between flex-wrap gap-4">
+      <header data-no-print className="px-6 py-5 border-b border-[var(--text-muted)]/20 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate({ to: "/" })} className="touch-btn h-11 px-4 rounded-lg bg-[var(--bg-tertiary)] text-sm font-display">← Volver al kiosko</button>
           <h1 className="font-display font-bold text-xl md:text-2xl">📊 Panel de gerencia</h1>
@@ -98,8 +98,13 @@ function Dashboard() {
             </button>
           ))}
         </div>
+        <button onClick={() => window.print()} className="touch-btn h-10 px-4 rounded-lg bg-[var(--suzuki-blue)] text-white text-sm font-display ml-2">🖨 Exportar PDF</button>
       </header>
 
+      <div className="print-header hidden">
+        <h1>Panel de gerencia — Concesionario Suzuki</h1>
+        <p>Período: {periodo === "hoy" ? "Hoy" : periodo === "semana" ? "Esta semana" : "Este mes"} · Generado: {new Date().toLocaleString("es-CO")}</p>
+      </div>
       <main className="px-6 py-6 max-w-7xl mx-auto space-y-6">
         {loading && <div className="py-20 text-center text-[var(--text-muted)] font-display">Cargando datos…</div>}
         {error && !loading && (

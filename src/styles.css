@@ -159,3 +159,27 @@ input, textarea {
   -webkit-user-select: text;
   user-select: text;
 }
+
+/* ===== Impresión / Exportar PDF (dashboard gerencia) ===== */
+.print-header { color: #0F1A2A; padding: 0 0 12px; border-bottom: 2px solid #003399; margin-bottom: 16px; }
+.print-header h1 { font-size: 20px; font-weight: bold; }
+.print-header p { font-size: 12px; color: #5B6673; margin-top: 4px; }
+
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  /* Forzar que los colores (barras, KPIs) SÍ se impriman */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { background: #fff !important; }
+  [data-no-print] { display: none !important; }
+  .print-header { display: block !important; }
+  /* Evitar cortes feos a mitad de una tarjeta o gráfica */
+  .bg-\[var\(--bg-secondary\)\] { break-inside: avoid; page-break-inside: avoid; }
+  main { padding: 0 !important; max-width: 100% !important; }
+  main > div { margin-bottom: 10px !important; }
+  /* KPIs SIEMPRE en fila de 4 al imprimir (el grid responsivo colapsa a 1 col en print) */
+  main > div:first-child { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; gap: 8px !important; }
+  main > div:first-child > div { padding: 10px !important; }
+  main > div:first-child .text-4xl { font-size: 26px !important; }
+  /* Compactar tarjetas y gráficas */
+  .bg-\[var\(--bg-secondary\)\] { padding: 12px !important; }
+}
