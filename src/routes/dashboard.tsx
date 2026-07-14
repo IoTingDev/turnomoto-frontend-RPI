@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid, LineChart, Line } from "recharts";
 import { useAdminGuard } from "@/hooks/use-admin-guard";
 import { obtenerResumenGerencia, type ResumenGerencia } from "@/lib/api-client";
 import { useTallerSocket } from "@/lib/use-taller-socket";
@@ -186,6 +186,61 @@ function Dashboard() {
                     </p>
                   </div>
                 </div>
+
+                <ChartCard title="Satisfacción del cliente">
+                  {data.kpis.satisfaccion.valor === null ? (
+                    <p className="text-[var(--text-muted)] text-sm py-6 text-center">Aún sin calificaciones en este período.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="flex flex-col justify-center">
+                        <div className="flex items-end gap-2">
+                          <span className="font-display font-bold text-5xl text-[var(--white)]">{data.kpis.satisfaccion.valor.toFixed(1)}</span>
+                          <span className="text-2xl mb-1" style={{ color: "#EF9F27" }}>
+                            {"★".repeat(Math.round(data.kpis.satisfaccion.valor))}<span style={{ color: "var(--bg-tertiary)" }}>{"★".repeat(5 - Math.round(data.kpis.satisfaccion.valor))}</span>
+                          </span>
+                        </div>
+                        {data.kpis.satisfaccion.delta !== null ? (
+                          <p className="mt-1 text-sm" style={{ color: data.kpis.satisfaccion.delta >= 0 ? C.verde : C.rojo }}>
+                            {data.kpis.satisfaccion.delta >= 0 ? "↑" : "↓"} {Math.abs(data.kpis.satisfaccion.delta).toFixed(1)} vs anterior
+                          </p>
+                        ) : (
+                          <p className="mt-1 text-sm text-[var(--text-muted)]">sin comparativa</p>
+                        )}
+                        <p className="mt-1 text-sm text-[var(--text-muted)]">{data.kpis.satisfaccion.n} opiniones</p>
+                      </div>
+                      {data.satisfaccion_tendencia.length > 1 && (
+                        <div>
+                          <p className="text-xs text-[var(--text-muted)] mb-2">Tendencia semanal</p>
+                          <ResponsiveContainer width="100%" height={130}>
+                            <LineChart data={data.satisfaccion_tendencia}>
+                              <CartesianGrid strokeDasharray="3 3" stroke="#E7ECF2" vertical={false} />
+                              <XAxis dataKey="semana" tickFormatter={(w: string) => "S" + String(w).split("-")[1]} stroke="#5B6673" fontSize={10} />
+                              <YAxis domain={[0, 5]} ticks={[0, 2.5, 5]} stroke="#5B6673" fontSize={10} width={20} />
+                              <Tooltip contentStyle={{ background: "#FFFFFF", border: "1px solid #E7ECF2", borderRadius: 8, color: "#0F1A2A", fontSize: 12 }} />
+                              <Line type="monotone" dataKey="promedio" stroke={C.completada} strokeWidth={2.5} dot={{ r: 3, fill: C.completada }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {data.comentarios_recientes.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-[var(--text-muted)]/15">
+                      <p className="text-xs text-[var(--text-muted)] mb-2">Comentarios recientes</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {data.comentarios_recientes.map((cm, i) => (
+                          <div key={i} className="bg-[var(--bg-tertiary)] rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm" style={{ color: "#EF9F27" }}>{"★".repeat(cm.estrellas)}<span style={{ color: "var(--text-muted)", opacity: 0.4 }}>{"★".repeat(5 - cm.estrellas)}</span></span>
+                              <span className="text-xs text-[var(--text-muted)]">{cm.servicio}</span>
+                            </div>
+                            <p className="text-sm italic text-[var(--white)]">"{cm.comentario}"</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </ChartCard>
               </>
             )}
           </>

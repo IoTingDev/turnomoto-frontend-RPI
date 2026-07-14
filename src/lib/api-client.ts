@@ -122,6 +122,12 @@ export function listarCitasCliente(clienteId: number): Promise<CitaResponse[]> {
   return api.get<CitaResponse[]>(`/clientes/${clienteId}/citas`);
 }
 
+// ===== Fase 5.9: Calificación CSAT =====
+export interface CalificacionData { estrellas: number; comentario: string | null; }
+export function enviarCalificacion(citaId: number, estrellas: number, comentario: string): Promise<{ id: number; cita_id: number; estrellas: number; comentario: string | null }> {
+  return api.post(`/calificaciones`, { cita_id: citaId, estrellas, comentario });
+}
+
 export function cancelarCita(citaId: number): Promise<CitaResponse> {
   return api.post<CitaResponse>(`/citas/${citaId}/cancelar`, {});
 }
@@ -204,10 +210,13 @@ export interface ResumenGerencia {
     cumplimiento_pct: { valor: number | null; delta_pts: number | null };
     ausentismo_pct: { valor: number | null; delta_pts: number | null };
     clientes: { total: number; nuevos: number; recurrentes: number };
+    satisfaccion: { valor: number | null; delta: number | null; n: number };
   };
   citas_por_dia: Array<{ fecha: string; completada: number; pendiente: number; cancelada: number; no_asistio: number }>;
   estados: Record<string, number>;
   top_servicios: Array<{ nombre: string; total: number }>;
+  satisfaccion_tendencia: Array<{ semana: string; promedio: number }>;
+  comentarios_recientes: Array<{ estrellas: number; comentario: string; servicio: string }>;
 }
 
 export function obtenerResumenGerencia(desde: string, hasta: string): Promise<ResumenGerencia> {

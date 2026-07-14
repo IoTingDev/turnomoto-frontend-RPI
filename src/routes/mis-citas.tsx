@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useIdleTimeout, IdleOverlay } from "@/lib/use-idle-timeout";
-import { listarCitasCliente, cancelarCita, ApiError } from "@/lib/api-client";
+import { listarCitasCliente, cancelarCita, enviarCalificacion, ApiError } from "@/lib/api-client";
 import { formatFechaLarga } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/mis-citas")({
@@ -10,7 +10,6 @@ export const Route = createFileRoute("/mis-citas")({
   component: MisCitas,
 });
 
-// Estructura enriquecida que ahora devuelve el backend
 interface CitaItem {
   id: number;
   turno: string;
@@ -19,6 +18,7 @@ interface CitaItem {
   notas: string | null;
   servicio: { id: number; nombre: string };
   moto: { id: number; placa: string; modelo: string };
+  calificacion: { estrellas: number; comentario: string | null } | null;
 }
 
 function formatHora(iso: string): string {
@@ -44,8 +44,78 @@ const ESTADO_LABEL: Record<string, { label: string; color: string }> = {
   no_asistio: { label: "No asistió", color: "var(--suzuki-red)" },
 };
 
-// Estados que cuentan como "próximos/activos" (accionables)
 const ESTADOS_ACTIVOS = ["pendiente", "confirmada", "en_proceso"];
+
+function BloqueCalificacion({ citaId, inicial, onEnviada }: { citaId: number; inicial: { estrellas: number; comentario: string | null } | null; onEnviada: () => void }) {
+  const [estrellas, setEstrellas] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comentario, setComentario] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState("");
+
+  if (inicial) {
+    return (
+      <div className="mt-3 pt-3 border-t border-[var(--text-muted)]/15">
+        <div className="flex items-center gap-2">
+          <span className="text-xl leading-none tracking-wide" style={{ color: "#EF9F27" }}>
+            {"★".repeat(inicial.estrellas)}<span style={{ color: "var(--bg-tertiary)" }}>{"★".repeat(5 - inicial.estrellas)}</span>
+          </span>
+          <span className="text-xs text-[var(--text-muted)]">Tu calificación</span>
+        </div>
+        {inicial.comentario && (
+          <p className="mt-2 text-sm italic text-[var(--white)] bg-[var(--bg-tertiary)] rounded-lg px-3 py-2">"{inicial.comentario}"</p>
+        )}
+        <p className="mt-1.5 text-xs text-[var(--text-muted)]">Gracias por tu opinión</p>
+      </div>
+    );
+  }
+
+  const enviar = async () => {
+    if (estrellas < 1) { setError("Toca una estrella para calificar"); return; }
+    setEnviando(true); setError("");
+    try {
+      await enviarCalificacion(citaId, estrellas, comentario.trim());
+      onEnviada();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "No se pudo enviar");
+      setEnviando(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 pt-3 border-t border-[var(--text-muted)]/15">
+      <p className="text-sm font-medium text-[var(--white)] mb-1.5">¿Cómo estuvo la atención?</p>
+      <div className="flex gap-1 text-3xl leading-none" onMouseLeave={() => setHover(0)}>
+        {[1, 2, 3, 4, 5].map((n) => (
+          <button
+            key={n}
+            data-no-osk
+            onMouseEnter={() => setHover(n)}
+            onClick={() => setEstrellas(n)}
+            className="touch-btn"
+            style={{ color: (hover || estrellas) >= n ? "#EF9F27" : "var(--bg-tertiary)" }}
+            aria-label={`${n} estrellas`}
+          >★</button>
+        ))}
+      </div>
+      <textarea
+        value={comentario}
+        onChange={(e) => setComentario(e.target.value)}
+        placeholder="Deja tus comentarios (opcional)"
+        rows={2}
+        className="mt-2 w-full rounded-lg bg-[var(--bg-tertiary)] text-[var(--white)] text-sm p-2 resize-none border border-[var(--text-muted)]/20"
+      />
+      {error && <p className="mt-1 text-xs text-[var(--suzuki-red)]">⚠ {error}</p>}
+      <button
+        onClick={enviar}
+        disabled={enviando}
+        className="touch-btn mt-2 h-11 px-5 rounded-lg bg-[var(--suzuki-blue)] text-white text-sm font-display disabled:opacity-60"
+      >
+        {enviando ? "Enviando…" : "Enviar calificación"}
+      </button>
+    </div>
+  );
+}
 
 function MisCitas() {
   const navigate = useNavigate();
@@ -80,6 +150,10 @@ function MisCitas() {
 
   if (!currentClient) return null;
 
+  const recargar = () => {
+    if (currentClient) listarCitasCliente(currentClient.id).then((f: any) => setCitas(f)).catch(() => {});
+  };
+
   const handleCancel = async (citaId: number) => {
     setCancellingId(citaId);
     setCancelError("");
@@ -96,7 +170,6 @@ function MisCitas() {
     }
   };
 
-  // Separar en Próximas (activas y futuras) e Historial (todo lo demás)
   const ahora = Date.now();
   const proximas = (citas ?? []).filter(
     (c) => ESTADOS_ACTIVOS.includes(c.estado) && new Date(c.fecha_hora).getTime() >= ahora
@@ -148,6 +221,9 @@ function MisCitas() {
             Esta cita ya está siendo atendida en el taller.
           </p>
         )}
+        {!esProxima && c.estado === "completada" && (
+          <BloqueCalificacion citaId={c.id} inicial={c.calificacion} onEnviada={recargar} />
+        )}
       </div>
     );
   };
@@ -198,7 +274,6 @@ function MisCitas() {
 
         {!loading && citas && citas.length > 0 && (
           <div className="space-y-6">
-            {/* Próximas */}
             <div>
               <h3 className="font-display text-sm uppercase tracking-wider text-[var(--suzuki-blue)] mb-3">
                 Próximas citas {proximas.length > 0 && `(${proximas.length})`}
@@ -214,7 +289,6 @@ function MisCitas() {
               )}
             </div>
 
-            {/* Historial */}
             {historial.length > 0 && (
               <div>
                 <h3 className="font-display text-sm uppercase tracking-wider text-[var(--text-muted)] mb-3">
@@ -229,7 +303,6 @@ function MisCitas() {
         )}
       </div>
 
-      {/* Confirmation modal */}
       {confirmingId !== null && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[var(--bg-secondary)] p-6 rounded-2xl border border-[var(--suzuki-red)]/40 max-w-md w-full">
