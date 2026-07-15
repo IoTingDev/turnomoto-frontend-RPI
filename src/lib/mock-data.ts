@@ -80,14 +80,16 @@ export const CLIENTE_DEMO: ClienteConMotos = {
 };
 
 export const MODELOS_SUZUKI: Record<string, string[]> = {
-  "AUTOMÁTICAS": ["Burgman 125", "Burgman FI", "Address NM", "Avenis"],
-  "SEMIAUTOMÁTICAS": ["Viva FI ABS"],
+  "AUTOMÁTICAS": ["Burgman 125", "Burgman FI", "Address NM", "ADDRESS NZ", "ACCESS 125", "AVENIS 125"],
+  "SEMIAUTOMÁTICAS": ["Viva FI ABS", "VIVA R STYLE E3", "VIVA R COOL E3", "AX4 EURO 3", "AX4 EVO EURO 3", "GN125 EURO3", "GSX 125", "BEST 125 FI"],
   "SPORT": [
     "GN 125 ABS", "GN 160", "AX4 ABS", "Gixxer FI 150 ABS",
     "Gixxer SF FI 150 ABS", "Gixxer 250", "Gixxer SF 250",
     "GSX-S150 ABS", "GSX-R150 ABS",
   ],
-  "ENDURO": ["DR 150", "DR 150 ABS", "DR 150 FI ABS", "DR 160X", "DR-Z4S"],
+  "ENDURO": ["DR 150", "DR 150 ABS", "DR 150 FI ABS", "DR 160X", "DR-Z4S", "DL 650 XT", "DL 1050 XT", "DR-Z4SM"],
+  "ADVENTURE": ["V-STROM 250 SX", "V-STROM 250", "V-STROM 160", "V-STROM 800 DE", "V-STROM 1050 DE", "DL 250"],
+  "ALTO CILINDRAJE": ["GSX-8T", "GSX-8R", "GSX-8S", "GSX-S750ZA", "GSX-S750A", "GSX-S1000 GT", "GSX-S1000", "GSX-R 1000R", "SV650A", "HAYABUSA", "INTRUDER"],
   "OTRO": ["Otro"],
 };
 
